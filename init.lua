@@ -93,6 +93,7 @@ class.type =
       return tname
    end
 
+-- DEBUG: OUCH, THAT IS TOO SLOW
 class.istype =
    function(obj, typename)
       local tname = type(obj)
@@ -114,5 +115,10 @@ class.istype =
          return typename == tname
       end
    end
+
+-- make sure argcheck understands those types
+local argcheckenv = getfenv(argcheck)
+argcheckenv.type = class.type
+argcheckenv.istype = class.istype
 
 return class
