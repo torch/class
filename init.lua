@@ -101,15 +101,14 @@ end
 -- DEBUG: OUCH, THAT IS TOO SLOW
 function class.istype(obj, typename)
    local tname = type(obj)
-   if tname == 'table' and typename ~= 'table' then
-      if obj.__typename then
-         obj = getmetatable(obj)
-         while type(obj) == 'table' do
-               if obj.__typename == typename then
-                  return true
-               else
-                  obj = getmetatable(obj)
-               end
+   if tname == 'table' then
+      local mt = getmetatable(obj)
+      if mt and rawget(mt, '__typename') then
+         while mt do
+            if rawget(mt, '__typename') == typename then
+               return true
+            end
+            mt = getmetatable(mt)
          end
          return false
       else
