@@ -10,7 +10,7 @@ class.new = argcheck{
    {name="parentname", type="string", opt=true},
    call =
       function(name, parentname)
-         assert(not classes[name], 'class <%s> already exists', name)
+         assert(not classes[name], string.format('class <%s> already exists', name))
 
          local class = {__typename = name, __version=1}
          class.__index = class
@@ -31,7 +31,7 @@ class.new = argcheck{
          isofclass[name] = {[name]=true}
 
          if parentname then
-            assert(classes[parentname], 'parent class <%s> does not exist', parentname)
+            assert(classes[parentname], string.format('parent class <%s> does not exist', parentname))
             setmetatable(class, classes[parentname])
             isofclass[parentname][name] = true
             return class, classes[parentname]
