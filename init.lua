@@ -3,6 +3,7 @@ local argcheckenv = require 'argcheck.env'
 
 local class = {}
 local classes = {}
+local isofclass = {}
 
 class.new = argcheck{
    {name="name", type="string"},
@@ -27,10 +28,12 @@ class.new = argcheck{
             end
 
          classes[name] = class
+         isofclass[name] = {[name]=true}
 
          if parentname then
             assert(classes[parentname], 'parent class <%s> does not exist', parentname)
             setmetatable(class, classes[parentname])
+            isofclass[parentname][name] = true
             return class, classes[parentname]
          else
             return class
@@ -98,28 +101,26 @@ function class.type(obj)
    return tname
 end
 
--- DEBUG: OUCH, THAT IS TOO SLOW
 function class.istype(obj, typename)
    local tname = type(obj)
    if tname == 'table' then
       local mt = getmetatable(obj)
-      if mt and rawget(mt, '__typename') then
-         while mt do
-            if rawget(mt, '__typename') == typename then
-               return true
+      if mt then
+         local objname = rawget(mt, '__typename')
+         if objname then -- that is one of our object
+            local valid = isofclass[typename]
+            if valid then
+               return rawget(valid, objname) or false
+            else
+               return false
             end
-            mt = getmetatable(mt)
          end
-         return false
-      else
-         return tname == typename
       end
-   else
-      return typename == tname
    end
+   return tname == typename
 end
 
 -- make sure argcheck understands those types
-argcheckenv.isoftype = class.istype
+argcheckenv.istype = class.istype
 
 return class
