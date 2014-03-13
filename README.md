@@ -43,6 +43,7 @@ local b = B('hello world from B')
 a:run()
 b:run()
 b:run5()
+```
 
 ## Documentation
 
