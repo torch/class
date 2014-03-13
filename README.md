@@ -56,9 +56,10 @@ Note that `class` does not clutter the global namespace.
 Class metatables are then created with `class(name)` or equivalently `class.new(name)`.
 ```lua
 local A = class('A')
+local B = class('B', 'A') -- B inherit from A
 ```
 
-You then have to fillup the returned metatable with methods.
+You then have to fill-up the returned metatable with methods.
 ```lua
 function A:myMethod()
   -- do something
@@ -72,6 +73,12 @@ function A:__init(args)
   -- do something with args
   -- note that self exists
 end
+```
+
+Creation of an instance is then achieved with the `new()` function or (equivalently) using the Lua `__call` metamethod:
+```lua
+local a = A('blah blah') -- an instance of A
+local aa = A.new('blah blah') -- equivalent of the above
 ```
 
 ### `class.new(name[, parentname])`
