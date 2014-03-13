@@ -5,6 +5,20 @@ local class = {}
 local classes = {}
 local isofclass = {}
 
+-- create a constructor table
+local function constructortbl(metatable)
+   local ct = {}
+   setmetatable(ct, {
+                   __index=metatable,
+                   __newindex=metatable,
+                   __metatable=metatable,
+                   __call=function(self, ...)
+                             return self.new(...)
+                          end
+                })
+   return ct
+end
+
 class.new = argcheck{
    {name="name", type="string"},
    {name="parentname", type="string", opt=true},
@@ -34,9 +48,9 @@ class.new = argcheck{
             assert(classes[parentname], string.format('parent class <%s> does not exist', parentname))
             setmetatable(class, classes[parentname])
             isofclass[parentname][name] = true
-            return class, classes[parentname]
+            return constructortbl(class), classes[parentname]
          else
-            return class
+            return constructortbl(class)
          end
       end
 }
@@ -60,36 +74,6 @@ class.metatable = argcheck{
       end
 }
 
-local function constructor(metatable, constructor)
-   local ct = {}
-   setmetatable(ct, {
-                   __index=metatable,
-                   __newindex=metatable,
-                   __metatable=metatable,
-                   __call=function(self, ...)
-                             return constructor(...)
-                          end
-                })
-   return ct
-end
-
-class.constructor = argcheck{
-   {name="metatable", type="table"},
-   {name="ctname", type="string", default="new"},
-   call =
-      function(metatable, ctname)
-         assert(metatable[ctname], string.format('constructor <%s> does not exist in metatable', ctname))
-         return constructor(metatable, metatable[ctname])
-      end
-}
-
-argcheck{
-   {name="metatable", type="table"},
-   {name="constructor", type="function"},
-   chain=class.constructor,
-   call=constructor
-}
-
 function class.type(obj)
    local tname = type(obj)
    if tname == 'table' then
@@ -107,7 +91,7 @@ function class.istype(obj, typename)
       local mt = getmetatable(obj)
       if mt then
          local objname = rawget(mt, '__typename')
-         if objname then -- that is one of our object
+         if objname then -- we are now sure it is one of our object
             local valid = isofclass[typename]
             if valid then
                return rawget(valid, objname) or false
@@ -122,5 +106,11 @@ end
 
 -- make sure argcheck understands those types
 argcheckenv.istype = class.istype
+
+-- allow class() instead of class.new()
+setmetatable(class, {__call=
+                        function(self, ...)
+                           return self.new(...)
+                        end})
 
 return class
