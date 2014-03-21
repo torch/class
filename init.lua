@@ -149,9 +149,16 @@ There is also a shorthand`class.new()`, which is `class()`.
          isofclass[name] = {[name]=true}
 
          if parentname then
-            assert(classes[parentname], string.format('parent class <%s> does not exist', parentname))
-            setmetatable(class, classes[parentname])
-            isofclass[parentname][name] = true
+            local parent = classes[parentname]
+            assert(parent, string.format('parent class <%s> does not exist', parentname))
+            setmetatable(class, parent)
+
+            -- consider as type of parent
+            while parent do
+               isofclass[parent.__typename][name] = true
+               parent = getmetatable(parent)
+            end
+
             return constructortbl(class), classes[parentname]
          else
             return constructortbl(class)
