@@ -205,12 +205,16 @@ returned by the standard lua `type()` function (if it is not known).
 
 ]]
 
+local function objname(obj)
+   return obj.__typename
+end
+
 function class.type(obj)
    local tname = type(obj)
-   if tname == 'table' then
-      local mt = getmetatable(obj)
-      if mt then
-         return rawget(mt, '__typename') or tname
+   if getmetatable(obj) then
+      local success, objname = pcall(objname, obj)
+      if success and objname then
+         return objname
       end
    end
    return tname
@@ -225,21 +229,29 @@ Check is `obj` is an instance (or a child) of class `name`. Returns a boolean.
 
 function class.istype(obj, typename)
    local tname = type(obj)
-   if tname == 'table' then
-      local mt = getmetatable(obj)
-      if mt then
-         local objname = rawget(mt, '__typename')
-         if objname then -- we are now sure it is one of our object
-            local valid = isofclass[typename]
-            if valid then
-               return rawget(valid, objname) or false
-            else
-               return false
-            end
+   if getmetatable(obj) then
+      local success, objname = pcall(objname, obj)
+      if success and objname then
+         local valid = rawget(isofclass, typename)
+         if valid then
+            return rawget(valid, objname) or false
+         else
+            return false
          end
       end
    end
    return tname == typename
+
+   -- this one one would accept a custom object as a table...
+   -- local tname = type(obj)
+   -- local valid = rawget(isofclass, typename)
+   -- if valid and getmetatable(obj) then
+   --    local success, objname = pcall(objname, obj)
+   --    if success and objname then
+   --       return rawget(valid, objname) or false
+   --    end
+   -- end
+   -- return tname == typename
 end
 
 -- make sure argcheck understands those types
