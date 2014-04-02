@@ -1,6 +1,11 @@
 local argcheck = require 'argcheck'
 local argcheckenv = require 'argcheck.env'
 local doc = require 'argcheck.doc'
+local ffi
+
+pcall(function()
+         ffi = require 'ffi'
+      end)
 
 doc[[
 Object Classes for Lua
@@ -91,6 +96,7 @@ local aa = A.new('blah blah') -- equivalent of the above
 local class = {}
 local classes = {}
 local isofclass = {}
+local ctypes = {}
 
 -- create a constructor table
 local function constructortbl(metatable)
@@ -108,7 +114,7 @@ end
 
 class.new = argcheck{
    doc = [[
-### `class.new(name[, parentname])`
+### `class.new(@ARGP)`
 
 Creates a new class called `name`, which might optionally inherit from `parentname`.
 Returns a table, in which methods should be defined.
@@ -121,17 +127,32 @@ local a = A.new() -- instance.
 local aa = A()    -- another instance (shorthand).
 ```
 
-There is also a shorthand`class.new()`, which is `class()`.
+There is also a shorthand `class.new()`, which is `class()`.
 
 ]],
-   {name="name", type="string"},
-   {name="parentname", type="string", opt=true},
+   {name="name", type="string", doc="class name"},
+   {name="parentname", type="string", opt=true, doc="parent class name"},
+   {name="ctype", type="cdata", opt=true, doc="ctype which should be considered as of class name"},
    call =
-      function(name, parentname)
-         assert(not classes[name], string.format('class <%s> already exists', name))
+      function(name, parentname, ctype)
+         local class = {__typename = name}
 
-         local class = {__typename = name, __version=1}
+         assert(not classes[name], string.format('class <%s> already exists', name))
+         if ctype then
+            local ctype_id = tonumber(ctype)
+            assert(ctype_id, 'invalid ffi ctype')
+            assert(not ctypes[ctype_id], string.format('ctype <%s> already considered as <%s>', tostring(ctype), ctypes[ctype_id]))
+            ctypes[ctype_id] = name
+         end
+
          class.__index = class
+
+         class.__factory =
+            function()
+               local self = {}
+               setmetatable(self, class)
+               return self
+            end
 
          class.__init =
             function()
@@ -139,8 +160,7 @@ There is also a shorthand`class.new()`, which is `class()`.
 
          class.new =
             function(...)
-               local self = {}
-               setmetatable(self, class)
+               local self = class.__factory()
                self:__init(...)
                return self
             end
@@ -177,9 +197,7 @@ Return a new (empty) instance of the class `name`. No `__init` method will be ca
    call =
       function(name)
          assert(classes[name], string.format('unknown class <%s>', name))
-         local t = {}
-         setmetatable(t, classes[name])
-         return t
+         return class[name].__factory()
       end
 }
 
@@ -205,19 +223,22 @@ returned by the standard lua `type()` function (if it is not known).
 
 ]]
 
-local function objname(obj)
-   return obj.__typename
-end
-
 function class.type(obj)
    local tname = type(obj)
-   if getmetatable(obj) then
-      local success, objname = pcall(objname, obj)
-      if success and objname then
-         return objname
-      end
+
+   local objname
+   if tname == 'cdata' then
+      objname = ctypes[tonumber(ffi.typeof(obj))]
+   elseif tname == 'userdata' or tname == 'table' then
+      local mt = getmetatable(obj)
+      objname = rawget(mt, '__typename')
    end
-   return tname
+
+   if objname then
+      return objname
+   else
+      return tname
+   end
 end
 
 doc[[
@@ -229,29 +250,25 @@ Check is `obj` is an instance (or a child) of class `name`. Returns a boolean.
 
 function class.istype(obj, typename)
    local tname = type(obj)
-   if getmetatable(obj) then
-      local success, objname = pcall(objname, obj)
-      if success and objname then
-         local valid = rawget(isofclass, typename)
-         if valid then
-            return rawget(valid, objname) or false
-         else
-            return false
-         end
-      end
-   end
-   return tname == typename
 
-   -- this one one would accept a custom object as a table...
-   -- local tname = type(obj)
-   -- local valid = rawget(isofclass, typename)
-   -- if valid and getmetatable(obj) then
-   --    local success, objname = pcall(objname, obj)
-   --    if success and objname then
-   --       return rawget(valid, objname) or false
-   --    end
-   -- end
-   -- return tname == typename
+   local objname
+   if tname == 'cdata' then
+      objname = ctypes[tonumber(ffi.typeof(obj))]
+   elseif tname == 'userdata' or tname == 'table' then
+      local mt = getmetatable(obj)
+      objname = rawget(mt, '__typename')
+   end
+
+   if objname then -- we are now sure it is one of our object
+      local valid = rawget(isofclass, typename)
+      if valid then
+         return rawget(valid, objname) or false
+      else
+         return false
+      end
+   else
+      return tname == typename
+   end
 end
 
 -- make sure argcheck understands those types
