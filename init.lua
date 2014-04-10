@@ -231,7 +231,9 @@ function class.type(obj)
       objname = ctypes[tonumber(ffi.typeof(obj))]
    elseif tname == 'userdata' or tname == 'table' then
       local mt = getmetatable(obj)
-      objname = rawget(mt, '__typename')
+      if mt then
+         objname = rawget(mt, '__typename')
+      end
    end
 
    if objname then
@@ -256,7 +258,9 @@ function class.istype(obj, typename)
       objname = ctypes[tonumber(ffi.typeof(obj))]
    elseif tname == 'userdata' or tname == 'table' then
       local mt = getmetatable(obj)
-      objname = rawget(mt, '__typename')
+      if mt then
+         objname = rawget(mt, '__typename')
+      end
    end
 
    if objname then -- we are now sure it is one of our object
