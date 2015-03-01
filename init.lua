@@ -268,7 +268,7 @@ function class.istype(obj, typename)
       if valid then
          return rawget(valid, objname) or false
       else
-         return false
+         return objname == typename -- it might be some other type system
       end
    else
       return tname == typename
