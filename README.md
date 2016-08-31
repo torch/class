@@ -25,10 +25,6 @@ end
 -- define some dummy B class, inheriting from A
 local B = class('B', 'A')
 
-function B:__init(stuff)
-  A.__init(self, stuff) -- call the parent init
-end
-
 function B:run5()
   for i=1,5 do
     print(self.stuff)
